@@ -1,6 +1,7 @@
 from change_payment_gateway.dtos.make_payment_request_dto import MakePaymentRequestDto
 from change_payment_gateway.dtos.make_payment_response_dto import MakePaymentResponseDto
 from change_payment_gateway.dtos.response_status import ResponseStatus
+from change_payment_gateway.exceptions.invalid_bill_exception import InvalidBillException
 from change_payment_gateway.services.payment_service import PaymentService
 
 
@@ -29,34 +30,27 @@ class PaymentController:
             A MakePaymentResponseDto with:
               - response_status = SUCCESS and the transaction details, if everything worked
               - response_status = FAILURE, if the bill_id was invalid
-
-        TODO (Step 1):
-            Extract the bill_id from the request object.
-            Hint: request.bill_id
-
-        TODO (Step 2):
-            Call self.payment_service.make_payment(bill_id) inside a try block.
-            This method can raise an InvalidBillException — make sure you handle it.
-
-        TODO (Step 3):
-            If the call succeeds, build and return a MakePaymentResponseDto with:
-              - response_status = ResponseStatus.SUCCESS
-              - txn_id          = the txn_id from the returned Payment object
-              - payment_status  = the payment_status from the returned Payment object
-
-        TODO (Step 4):
-            In the except block, catch InvalidBillException.
-            If it is raised, build and return a MakePaymentResponseDto with:
-              - response_status = ResponseStatus.FAILURE
-              - txn_id          = None  (no transaction happened)
-              - payment_status  = None  (no transaction happened)
-
-        NOTE:
-            Import InvalidBillException from:
-            change_payment_gateway.exceptions.invalid_bill_exception
         """
-        # ↓↓↓ Write your code below this line ↓↓↓
+        try:
+            # Step 1: Extract the bill_id from the incoming request
+            bill_id = request.bill_id
 
-        pass
+            # Step 2: Delegate to the service — this is where the real work happens.
+            # If the bill_id is invalid, the service will raise InvalidBillException.
+            payment = self.payment_service.make_payment(bill_id)
 
-        # ↑↑↑ Write your code above this line ↑↑↑
+            # Step 3: Payment succeeded — build a SUCCESS response with transaction details
+            return MakePaymentResponseDto(
+                response_status=ResponseStatus.SUCCESS,
+                txn_id=payment.txn_id,
+                payment_status=payment.payment_status,
+            )
+
+        except InvalidBillException:
+            # Step 4: The bill_id did not exist — return a FAILURE response.
+            # We set txn_id and payment_status to None because no transaction was made.
+            return MakePaymentResponseDto(
+                response_status=ResponseStatus.FAILURE,
+                txn_id=None,
+                payment_status=None,
+            )
